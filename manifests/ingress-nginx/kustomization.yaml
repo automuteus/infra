@@ -1,0 +1,6 @@
+bases:
+  - github.com/kubernetes/ingress-nginx/deploy/static/provider/cloud?ref=master
+
+patchesStrategicMerge:
+  - nginx-deployment.yaml
+  - nginx-configmap.yaml

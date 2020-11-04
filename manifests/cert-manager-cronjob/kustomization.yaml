@@ -1,0 +1,6 @@
+resources:
+  - job.yaml
+commonLabels:
+  app: cert-manager-cronjob
+
+namespace: cert-manager-cronjob

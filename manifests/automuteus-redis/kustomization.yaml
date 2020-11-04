@@ -1,0 +1,5 @@
+resources:
+  - automuteus-redis.yaml
+commonLabels:
+  app: automuteus-redis
+namespace: automuteus-redis

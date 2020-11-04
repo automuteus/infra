@@ -1,0 +1,5 @@
+resources:
+  - cert-manager.yaml
+  - clusterissuer.yaml
+  - certificates.yaml
+  - secret.yaml

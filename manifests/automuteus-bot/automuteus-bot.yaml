@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: automuteus-bot
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: automuteus-bot
+spec:
+  template:
+    spec:
+      containers:
+        - name: bot
+          image: denverquane/amongusdiscord:3.1.0
+          env:
+            - { name: DISCORD_BOT_TOKEN, value: snip }
+            - { name: DISCORD_BOT_TOKEN_2, value: snop }
+            - { name: HOST, value: "https://botonk8s.automute.us:443/" }
+            - { name: PORT, value: "8123" }
+            - { name: EMOJI_GUILD_ID, value: "snap" }
+            - { name: REDIS_ADDRESS, value: "redis.automuteus-redis:6379" }
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1024Mi
+            limits:
+              cpu: 2000m
+              memory: 2048Mi
+          livenessProbe:
+            tcpSocket:
+              port: 8123
+          readinessProbe:
+            tcpSocket:
+              port: 8123
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: automuteus-bot
+spec:
+  ports:
+    - port: 80
+      targetPort: 8123
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: automuteus-bot
+  annotations:
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  tls:
+    - hosts:
+        - "*.automute.us"
+      secretName: wildcard-automute-us-tls
+  rules:
+    - host: botonk8s.automute.us
+      http:
+        paths:
+          - backend:
+              serviceName: automuteus-bot
+              servicePort: 80
+            path: /
+#################### cronjob for autoupdate
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: automuteus-bot-cronjob
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: automuteus-bot-cronjob
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs:
+      - get
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: automuteus-bot-cronjob
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: automuteus-bot-cronjob
+subjects:
+  - name: automuteus-bot-cronjob
+    namespace: automuteus-bot-cronjob
+    kind: ServiceAccount
+
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: automuteus-bot-cronjob
+spec:
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: automuteus-bot-cronjob
+          containers:
+            - name: hyperkube
+              command: ["/bin/bash"]
+              image: "eu.gcr.io/google_containers/hyperkube:v1.18.6"
+              args: ["-xc", "kubectl rollout restart deployment automuteus-bot"]
